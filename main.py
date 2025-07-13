@@ -10,10 +10,15 @@ st.set_page_config(page_title="血压 & 血糖趋势图", layout="centered")
 st.subheader("📈 血压 & 血糖趋势图表")
 
 # ✅ 用 Streamlit 的 secrets.toml 做 Google Sheets 授权
+# 从 st.secrets 读取认证信息
 creds = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]
+    st.secrets["gcp_service_account"],
+    scopes=["https://www.googleapis.com/auth/spreadsheets"]
 )
+
+# 连接 Google Sheet
 gc = gspread.authorize(creds)
+spreadsheet = gc.open("BP-Glucose-Tracker")
 
 # ✅ Twilio 授权（记得填入 secrets.toml）
 account_sid = st.secrets["twilio"]["account_sid"]
