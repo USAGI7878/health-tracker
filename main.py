@@ -19,7 +19,13 @@ creds = service_account.Credentials.from_service_account_info(
 client = gspread.authorize(creds)
 # 连接 Google Sheet
 gc = gspread.authorize(creds)
-spreadsheet = gc.open("BP-Glucose-Tracker")
+# 替换成以下这段
+try:
+    spreadsheet = gc.open("BP-Glucose-Tracker")
+    st.success("✅ 成功连接 Google Sheet！")
+except Exception as e:
+    st.error(f"❌ 连接失败：{e}")
+
 
 # ✅ Twilio 授权（记得填入 secrets.toml）
 account_sid = st.secrets["twilio"]["account_sid"]
