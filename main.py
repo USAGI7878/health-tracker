@@ -14,7 +14,10 @@ st.subheader("📈 血压 & 血糖趋势图表")
 
 creds = service_account.Credentials.from_service_account_info(
     st.secrets["gcp_service_account"],
-    scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
 )
 client = gspread.authorize(creds)
 # 连接 Google Sheet
