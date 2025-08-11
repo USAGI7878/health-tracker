@@ -119,11 +119,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="big-font">📋 血压 & 血糖记录查看</div>', unsafe_allow_html=True)
+st.markdown('<div class="big-font">📋 血压 & 血糖记录查看Blood Pressure and Blood Sugar Record</div>', unsafe_allow_html=True)
 
 
 if st.checkbox("🔍 开启大字体 / High Contrast"):
-    st.markdown('<style>body {font-size: 24px; background-color: #f8f9fa;}</style>', unsafe_allow_html=True)
+    st.markdown('<style>body {font-size: 40px; background-color: #f8f9fa;}</style>', unsafe_allow_html=True)
 
 # 展示最近 5 笔记录
 st.subheader("🕒 最近记录Latest Update")
@@ -162,7 +162,7 @@ with st.form("record_form"):
             systolic, diastolic, pulse, bp_status, bp_note, glucose, glucose_status, glucose_note
         ]
         worksheet.append_row(new_row)
-        st.success("✅ 记录已成功提交！")
+        st.success("✅ 记录已成功提交！Done!")
 
 st.markdown("### 💊 药物库存提醒")
 
