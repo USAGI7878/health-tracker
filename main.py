@@ -6,8 +6,8 @@ from twilio.rest import Client
 import datetime
 
 # 设置页面标题
-st.set_page_config(page_title="血压 & 血糖趋势图", layout="centered")
-st.subheader("📈 血压 & 血糖趋势图表")
+st.set_page_config(page_title="血压 & 血糖趋势图Blood Pressure & Blood Sugar Graph", layout="centered")
+st.subheader("📈 血压 & 血糖趋势图表Blood Pressure & Blood Sugar Graph")
 
 # ✅ 用 Streamlit 的 secrets.toml 做 Google Sheets 授权
 # 从 st.secrets 读取认证信息
@@ -50,28 +50,28 @@ if date_col:
     df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
     df["Date"] = df[date_col].dt.strftime('%Y-%m-%d')  # 格式标准化
 
-    if st.toggle("📊 显示趋势图表"):
+    if st.toggle("📊 显示趋势图表Graph"):
         df_sorted = df.sort_values(by="Date")
         
         # 血压趋势图
-        st.markdown("#### 🫀 血压趋势（收缩压 / 舒张压）")
+        st.markdown("#### 🫀 血压趋势Blood Pressure（收缩压 / 舒张压）")
         st.line_chart(df_sorted[["Date", "Systolic", "Diastolic"]].set_index("Date"))
 
         # 脉搏趋势图
-        st.markdown("#### 💓 脉搏趋势")
+        st.markdown("#### 💓 脉搏趋势Pulse")
         st.line_chart(df_sorted[["Date", "Pulse"]].set_index("Date"))
 
         # 血糖趋势图
-        st.markdown("#### 🍬 血糖趋势")
+        st.markdown("#### 🍬 血糖趋势Blood Sugar")
         st.line_chart(df_sorted[["Date", "Glucose(mmol/L)"]].set_index("Date"))
 
     # ✅ 显示表格
-    st.subheader("🩺 血压和血糖记录表格")
+    st.subheader("🩺 血压和血糖记录表格Blood Pressure and Blood Sugar record chart")
     st.dataframe(df)
 
     # ✅ 筛选器
     with st.expander("🔍 数据筛选"):
-        date_filter = st.date_input("选择日期查看记录")
+        date_filter = st.date_input("选择日期查看记录Choose date")
         filtered_df = df[df["Date"] == date_filter.strftime("%Y-%m-%d")]
         st.dataframe(filtered_df)
 else:
@@ -104,7 +104,7 @@ df.rename(columns=column_mapping, inplace=True)
 if "Date" in df.columns:
     df["Date"] = pd.to_datetime(df["Date"], errors='coerce').dt.strftime('%Y-%m-%d')
 else:
-    st.warning("⚠️ 没有找到日期栏位，图表和筛选功能将无法使用。")
+    st.warning("⚠️ 没有找到日期栏位，图表和筛选功能将无法使用。Error")
 
 # ✅ 3. 样式美化
 st.markdown("""
@@ -126,10 +126,10 @@ if st.checkbox("🔍 开启大字体 / High Contrast"):
     st.markdown('<style>body {font-size: 24px; background-color: #f8f9fa;}</style>', unsafe_allow_html=True)
 
 # 展示最近 5 笔记录
-st.subheader("🕒 最近记录")
+st.subheader("🕒 最近记录Latest Update")
 st.dataframe(df.tail(5), use_container_width=True)
 
-st.subheader("📝 新增记录")
+st.subheader("📝 新增记录New Record")
 
 with st.form("record_form"):
     col1, col2 = st.columns(2)
@@ -178,29 +178,29 @@ stock_df['Estimated Finish Date'] = stock_df['Refill Date'] + pd.to_timedelta(st
 
 # 判断是否少于7天
 today = datetime.datetime.today()
-stock_df['Warning'] = stock_df['Estimated Finish Date'].apply(lambda x: "⚠️ 快用完了！" if (x - today).days <= 7 else "")
+stock_df['Warning'] = stock_df['Estimated Finish Date'].apply(lambda x: "⚠️ 快用完了！Going to finish!" if (x - today).days <= 7 else "")
 
 # 显示提醒
 st.dataframe(stock_df[['jie', 'Total Given', 'Dose Per Day', 'Estimated Finish Date', 'Warning']])
 
-with st.expander("➕ 添加新药物记录"):
-    new_med_name = st.text_input("药物名称")
-    new_refill_date = st.date_input("补药日期")
-    new_total = st.number_input("药品总数", min_value=0)
-    new_dose = st.number_input("每日剂量", min_value=0.0, step=0.1)
-    new_note = st.text_input("备注", placeholder="例如：医生改剂量")
+with st.expander("➕ 添加新药物记录Add Medication"):
+    new_med_name = st.text_input("药物名称Medication Name")
+    new_refill_date = st.date_input("补药日期Restock Date")
+    new_total = st.number_input("药品总数Total amount left", min_value=0)
+    new_dose = st.number_input("每日剂量Daily dose", min_value=0.0, step=0.1)
+    new_note = st.text_input("备注Note", placeholder="例如：医生改剂量Dr change medication dose ?")
 
-    if st.button("添加药物"):
+    if st.button("添加药物Add Medication"):
         new_row = [new_med_name, new_refill_date.strftime("%Y-%m-%d"), new_total, new_dose, new_note]
         stock_sheet.append_row(new_row)
-        st.success("✅ 药物记录已添加")
+        st.success("✅ 药物记录已添加Done")
 
-with st.expander("📝 修改药物剂量"):
+with st.expander("📝 修改药物剂量Edit dose"):
     med_options = stock_df['jie'].tolist()
-    selected_med = st.selectbox("选择要修改的药物", med_options)
-    new_dose = st.number_input("新的每日剂量", min_value=0.0, step=0.1)
+    selected_med = st.selectbox("选择要修改的药物Choose to edit", med_options)
+    new_dose = st.number_input("新的每日剂量New medication dose", min_value=0.0, step=0.1)
 
-    if st.button("更新剂量"):
+    if st.button("更新剂量Update dose"):
         # 找到对应行
         cell = stock_sheet.find(selected_med)
         if cell:
@@ -216,7 +216,7 @@ from_number = st.secrets["twilio"]["from_number"]
 to_number = st.secrets["twilio"]["to_number"]
 
 message = client.messages.create(
-    body="提醒：妈咪要吃药咯～💊",
+    body="提醒：要吃药咯～💊",
     from_=from_number,
     to=to_number
 )
