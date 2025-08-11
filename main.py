@@ -142,15 +142,15 @@ with st.form("record_form"):
         dose = st.text_input("剂量Dose", placeholder="例如Example：5 mg")
 
     with col2:
-        systolic = st.number_input("收缩压（Systolic）", min_value=50, max_value=250)
-        diastolic = st.number_input("舒张压（Diastolic）", min_value=30, max_value=150)
+        systolic = st.number_input("收缩压<（Systolic）", min_value=50, max_value=250)
+        diastolic = st.number_input("舒张压>（Diastolic）", min_value=30, max_value=150)
         pulse = st.number_input("脉搏（Pulse）", min_value=30, max_value=180)
-        glucose = st.number_input("血糖（mmol/L）", min_value=1.0, max_value=20.0, format="%.1f")
+        glucose = st.number_input("血糖Blood Sugar（mmol/L）", min_value=1.0, max_value=20.0, format="%.1f")
 
-    bp_note = st.text_input("血压备注", placeholder="例如：感觉头晕、还好等")
-    glucose_note = st.text_input("血糖备注", placeholder="例如：空腹后测量、饭后两小时等")
+    bp_note = st.text_input("血压备注Note for BP", placeholder="例如：感觉头晕、还好等")
+    glucose_note = st.text_input("血糖备注Note got BS", placeholder="例如：空腹后测量、饭后两小时等")
 
-    submitted = st.form_submit_button("✅ 提交记录")
+    submitted = st.form_submit_button("✅ 提交记录Submit !")
 
     if submitted:
         bp_status = "高" if systolic > 140 or diastolic > 90 else "正常"
