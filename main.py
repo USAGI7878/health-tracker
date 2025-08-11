@@ -134,12 +134,12 @@ st.subheader("📝 新增记录")
 with st.form("record_form"):
     col1, col2 = st.columns(2)
     with col1:
-        date = st.date_input("日期")
-        time_of_day = st.selectbox("时间段", ["早上", "中午", "晚上"])
-        took_med = st.radio("有吃药吗？", ["是", "否"])
-        medication = st.text_input("药物名称", placeholder="例如：Amlo 或 Metformin")
-        before_after = st.selectbox("饭前/饭后", ["饭前", "饭后"])
-        dose = st.text_input("剂量", placeholder="例如：5 mg")
+        date = st.date_input("日期Date")
+        time_of_day = st.selectbox("时间段Timing", ["早上AM", "中午NOON", "晚上PM"])
+        took_med = st.radio("有吃药吗Taken Medication？", ["是Yes", "否NO"])
+        medication = st.text_input("药物名称Medication", placeholder="例如：Amlo 或 Metformin")
+        before_after = st.selectbox("饭前/饭后Meal", ["饭前Before", "饭后After"])
+        dose = st.text_input("剂量Dose", placeholder="例如Example：5 mg")
 
     with col2:
         systolic = st.number_input("收缩压（Systolic）", min_value=50, max_value=250)
