@@ -164,7 +164,7 @@ with st.form("record_form"):
         worksheet.append_row(new_row)
         st.success("✅ 记录已成功提交！Done!")
 
-st.markdown("### 💊 药物库存提醒")
+st.markdown("### 💊 药物库存提醒Medication Store")
 
 # 读取第二个 worksheet
 stock_sheet = spreadsheet.worksheet("Medication Stock")
