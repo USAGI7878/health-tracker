@@ -100,8 +100,8 @@ st.markdown("---")
 st.subheader("🤖 AI 健康助手 AI Health Assistant")
 st.write("问我关于你的健康数据！Ask me about your health data!")
 
-# DeepSeek API 配置
-deepseek_api_key = st.secrets.get("deepseek", {}).get("api_key", "")
+# Groq API 配置 (100% FREE!)
+groq_api_key = st.secrets.get("groq", {}).get("api_key", "")
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -109,8 +109,8 @@ if "chat_history" not in st.session_state:
 user_question = st.text_input("💬 问问题Ask a question:", placeholder="例如Example：我的血压趋势如何？My blood pressure trend?")
 
 if st.button("🚀 询问 AI Ask AI") and user_question:
-    if not deepseek_api_key:
-        st.warning("⚠️ 请在 secrets.toml 添加 DeepSeek API key")
+    if not groq_api_key:
+        st.warning("⚠️ 请在 secrets.toml 添加 Groq API key")
     else:
         with st.spinner("🤔 AI 正在分析中 Analyzing..."):
             # 准备健康数据摘要
@@ -131,16 +131,16 @@ if st.button("🚀 询问 AI Ask AI") and user_question:
 {recent_data}
 """
             
-            # 调用 DeepSeek API
+            # 调用 Groq API (100% FREE!)
             try:
                 response = requests.post(
-                    "https://api.deepseek.com/v1/chat/completions",
+                    "https://api.groq.com/openai/v1/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {deepseek_api_key}",
+                        "Authorization": f"Bearer {groq_api_key}",
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "deepseek-chat",
+                        "model": "llama-3.3-70b-versatile",  # Fast & free model
                         "messages": [
                             {
                                 "role": "system",
@@ -151,7 +151,8 @@ if st.button("🚀 询问 AI Ask AI") and user_question:
                                 "content": f"{health_summary}\n\n用户问题User Question: {user_question}"
                             }
                         ],
-                        "temperature": 0.7
+                        "temperature": 0.7,
+                        "max_tokens": 1024
                     }
                 )
                 
