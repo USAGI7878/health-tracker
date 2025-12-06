@@ -402,11 +402,11 @@ elif page == "🤖 AI 助手 AI Assistant":
                             "messages": [
                                 {
                                     "role": "system",
-                                    "content": "你是一个友善的健康助手，帮助老年人理解他们的血压和血糖数据。用简单易懂的语言回答，并给出实用的建议。You are a friendly health assistant helping elderly understand their blood pressure and blood sugar data. Answer in simple language with practical advice."
+                                    "content": "You are a friendly health assistant helping elderly people understand their blood pressure and blood sugar data. Always respond in the SAME LANGUAGE the user asks in (English or Chinese). Use simple, easy-to-understand language and give practical advice. 你是一个友善的健康助手，帮助老年人理解他们的血压和血糖数据。请用用户提问的语言回答（英文或中文）。用简单易懂的语言，并给出实用的建议。"
                                 },
                                 {
                                     "role": "user",
-                                    "content": f"{health_summary}\n\n用户问题 User Question: {user_question}"
+                                    "content": f"{health_summary}\n\nUser Question: {user_question}"
                                 }
                             ],
                             "temperature": 0.7,
