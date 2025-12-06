@@ -63,8 +63,20 @@ def load_health_data():
     }
     df.rename(columns=column_mapping, inplace=True)
     
+    # Clean up the data
     if "Date" in df.columns:
-        df["Date"] = pd.to_datetime(df["Date"], errors='coerce').dt.strftime('%Y-%m-%d')
+        df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
+        df = df.dropna(subset=["Date"])  # Remove rows with invalid dates
+        df["Date"] = df["Date"].dt.strftime('%Y-%m-%d')
+    
+    # Convert numeric columns and handle empty strings
+    numeric_cols = ["Systolic", "Diastolic", "Pulse", "Glucose(mmol/L)"]
+    for col in numeric_cols:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+    
+    # Remove completely empty rows
+    df = df.dropna(how='all')
     
     return df
 
@@ -222,32 +234,44 @@ elif page == "📊 趋势图表 Charts":
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        avg_systolic = df["Systolic"].mean() if "Systolic" in df.columns else 0
+        avg_systolic = df["Systolic"].dropna().mean() if "Systolic" in df.columns and not df["Systolic"].dropna().empty else 0
         st.metric("平均收缩压 Avg Systolic", f"{avg_systolic:.1f} mmHg")
     
     with col2:
-        avg_diastolic = df["Diastolic"].mean() if "Diastolic" in df.columns else 0
+        avg_diastolic = df["Diastolic"].dropna().mean() if "Diastolic" in df.columns and not df["Diastolic"].dropna().empty else 0
         st.metric("平均舒张压 Avg Diastolic", f"{avg_diastolic:.1f} mmHg")
     
     with col3:
-        avg_pulse = df["Pulse"].mean() if "Pulse" in df.columns else 0
+        avg_pulse = df["Pulse"].dropna().mean() if "Pulse" in df.columns and not df["Pulse"].dropna().empty else 0
         st.metric("平均脉搏 Avg Pulse", f"{avg_pulse:.0f} bpm")
     
     with col4:
-        avg_glucose = df["Glucose(mmol/L)"].mean() if "Glucose(mmol/L)" in df.columns else 0
+        avg_glucose = df["Glucose(mmol/L)"].dropna().mean() if "Glucose(mmol/L)" in df.columns and not df["Glucose(mmol/L)"].dropna().empty else 0
         st.metric("平均血糖 Avg Glucose", f"{avg_glucose:.1f} mmol/L")
     
     st.markdown("---")
     
     # 图表
     st.subheader("🫀 血压趋势 Blood Pressure Trend")
-    st.line_chart(df_sorted[["Date", "Systolic", "Diastolic"]].set_index("Date"))
+    chart_df = df_sorted[["Date", "Systolic", "Diastolic"]].dropna()
+    if not chart_df.empty:
+        st.line_chart(chart_df.set_index("Date"))
+    else:
+        st.info("📊 暂无数据 No data available")
     
     st.subheader("💓 脉搏趋势 Pulse Trend")
-    st.line_chart(df_sorted[["Date", "Pulse"]].set_index("Date"))
+    pulse_df = df_sorted[["Date", "Pulse"]].dropna()
+    if not pulse_df.empty:
+        st.line_chart(pulse_df.set_index("Date"))
+    else:
+        st.info("📊 暂无数据 No data available")
     
     st.subheader("🍬 血糖趋势 Blood Sugar Trend")
-    st.line_chart(df_sorted[["Date", "Glucose(mmol/L)"]].set_index("Date"))
+    glucose_df = df_sorted[["Date", "Glucose(mmol/L)"]].dropna()
+    if not glucose_df.empty:
+        st.line_chart(glucose_df.set_index("Date"))
+    else:
+        st.info("📊 暂无数据 No data available")
     
     # 完整数据表
     st.markdown("---")
@@ -345,9 +369,9 @@ elif page == "🤖 AI 助手 AI Assistant":
                 # 准备健康数据摘要
                 recent_data = df.tail(10).to_string()
                 
-                avg_systolic = df["Systolic"].mean() if "Systolic" in df.columns else 0
-                avg_diastolic = df["Diastolic"].mean() if "Diastolic" in df.columns else 0
-                avg_glucose = df["Glucose(mmol/L)"].mean() if "Glucose(mmol/L)" in df.columns else 0
+                avg_systolic = df["Systolic"].dropna().mean() if "Systolic" in df.columns and not df["Systolic"].dropna().empty else 0
+                avg_diastolic = df["Diastolic"].dropna().mean() if "Diastolic" in df.columns and not df["Diastolic"].dropna().empty else 0
+                avg_glucose = df["Glucose(mmol/L)"].dropna().mean() if "Glucose(mmol/L)" in df.columns and not df["Glucose(mmol/L)"].dropna().empty else 0
                 
                 health_summary = f"""
 用户最近的健康数据：
