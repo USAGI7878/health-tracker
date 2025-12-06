@@ -211,12 +211,17 @@ if page == "📝 数据输入 Data Entry":
             ]
             worksheet.append_row(new_row)
             st.success("✅ 记录已成功提交！Done!")
+            
+            # Clear cache and refresh
             st.cache_data.clear()
             
             # 清除 OCR 数据
             for key in ['ocr_systolic', 'ocr_diastolic', 'ocr_pulse']:
                 if key in st.session_state:
                     del st.session_state[key]
+            
+            # Force page refresh to show new data
+            st.rerun()
 
 # ==================== 页面 2: 趋势图表 ====================
 elif page == "📊 趋势图表 Charts":
@@ -329,6 +334,7 @@ elif page == "💊 药物管理 Medication":
                 stock_sheet.append_row(new_row)
                 st.success("✅ 药物记录已添加 Done!")
                 st.cache_data.clear()
+                st.rerun()
     
     # 修改剂量
     with col_med2:
@@ -344,6 +350,7 @@ elif page == "💊 药物管理 Medication":
                     stock_sheet.update_cell(row_num, 4, new_dose_edit)
                     st.success(f"✅ {selected_med} 剂量已更新 Dose updated!")
                     st.cache_data.clear()
+                    st.rerun()
 
 # ==================== 页面 4: AI 助手 ====================
 elif page == "🤖 AI 助手 AI Assistant":
