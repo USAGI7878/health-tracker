@@ -172,8 +172,11 @@ if page == "📝 数据输入 Data Entry":
         col1, col2 = st.columns(2)
         
         with col1:
-            date = st.date_input("日期 Date")
-            time_of_day = st.selectbox("时间段 Timing", ["早上 AM", "中午 NOON", "晚上 PM"])
+            # Auto-capture current date and time
+            current_datetime = datetime.datetime.now()
+            date = st.date_input("日期 Date", value=current_datetime.date(), disabled=True)
+            time_display = st.text_input("时间 Time", value=current_datetime.strftime("%H:%M:%S"), disabled=True)
+            
             took_med = st.radio("有吃药吗 Taken Medication?", ["是 Yes", "否 NO"])
             
             # Medication dropdown with stock list
@@ -216,12 +219,17 @@ if page == "📝 数据输入 Data Entry":
             bp_status = "高" if systolic > 140 or diastolic > 90 else "正常"
             glucose_status = "高" if glucose > 7.8 else ("低" if glucose < 3.9 else "正常")
             
+            # Capture exact submission time
+            submission_time = datetime.datetime.now()
+            
             new_row = [
-                str(date), time_of_day, took_med, medication, before_after, dose,
+                submission_time.strftime("%Y-%m-%d"),  # Date
+                submission_time.strftime("%H:%M:%S"),  # Exact time
+                took_med, medication, before_after, dose,
                 systolic, diastolic, pulse, bp_status, bp_note, glucose, glucose_status, glucose_note
             ]
             worksheet.append_row(new_row)
-            st.success("✅ 记录已成功提交！Done!")
+            st.success(f"✅ 记录已成功提交！Submitted at {submission_time.strftime('%H:%M:%S')}")
             
             # Clear cache and refresh
             st.cache_data.clear()
