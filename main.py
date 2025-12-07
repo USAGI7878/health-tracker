@@ -114,6 +114,10 @@ if page == "📝 数据输入 Data Entry":
     df = load_health_data()
     worksheet = spreadsheet.worksheet("Sheet1")
     
+    # Load medication list from stock
+    stock_df = load_medication_stock()
+    medication_list = ["无 None"] + stock_df['jie'].tolist() if not stock_df.empty else ["无 None"]
+    
     # 显示最近记录
     st.subheader("🕒 最近记录 Latest Records")
     st.dataframe(df.tail(5), use_container_width=True)
@@ -171,7 +175,14 @@ if page == "📝 数据输入 Data Entry":
             date = st.date_input("日期 Date")
             time_of_day = st.selectbox("时间段 Timing", ["早上 AM", "中午 NOON", "晚上 PM"])
             took_med = st.radio("有吃药吗 Taken Medication?", ["是 Yes", "否 NO"])
-            medication = st.text_input("药物名称 Medication", placeholder="例如：Amlo 或 Metformin")
+            
+            # Medication dropdown with stock list
+            medication = st.selectbox(
+                "药物名称 Medication", 
+                medication_list,
+                help="从药物库存中选择 Select from medication stock"
+            )
+            
             before_after = st.selectbox("饭前/饭后 Meal", ["饭前 Before", "饭后 After"])
             dose = st.text_input("剂量 Dose", placeholder="例如：5 mg")
         
