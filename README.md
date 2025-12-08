@@ -42,32 +42,32 @@ cd health-tracker
 pip install -r requirements.txt
 ```
 
-### 3️⃣ Install Tesseract OCR
-
-**For Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install tesseract-ocr
+**Your requirements.txt should include:**
+```
+streamlit
+pandas
+gspread
+google-auth
+google-cloud-vision
+twilio
+Pillow
+requests
 ```
 
-**For macOS:**
-```bash
-brew install tesseract
-```
+### 3️⃣ Enable Google Cloud Vision API
 
-**For Windows:**
-1. Download the installer from [GitHub](https://github.com/UB-Mannheim/tesseract/wiki)
-2. Install it (default location: `C:\Program Files\Tesseract-OCR\`)
-3. Add to PATH:
-   - Open System Properties → Environment Variables
-   - Add `C:\Program Files\Tesseract-OCR` to PATH
+**Important:** You need to enable the Vision API in your Google Cloud Console:
 
-**For Streamlit Cloud Deployment:**
-Create a `packages.txt` file in your project root:
-```
-tesseract-ocr
-libtesseract-dev
-```
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Select your project (same one you used for Google Sheets)
+3. Go to **APIs & Services** → **Library**
+4. Search for **"Cloud Vision API"**
+5. Click **Enable**
+6. No new credentials needed - it uses your existing service account!
+
+**For Streamlit Cloud:**
+- Remove `packages.txt` (no longer need Tesseract)
+- The Vision API works automatically with your existing Google credentials
 
 ### 4️⃣ Configure Secrets
 
