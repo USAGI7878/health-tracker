@@ -142,14 +142,47 @@ if page == "📝 数据输入 Data Entry":
             if st.button("🔍 识别数值 Read Numbers", use_container_width=True):
                 with st.spinner("正在识别中 Reading..."):
                     try:
-                        text = pytesseract.image_to_string(image)
-                        numbers = re.findall(r'\d+\.?\d*', text)
+                        # Preprocess image for better OCR
+                        from PIL import ImageEnhance, ImageFilter
                         
-                        if len(numbers) >= 2:
-                            # Validate and set reasonable defaults if out of range
-                            systolic_val = float(numbers[0])
-                            diastolic_val = float(numbers[1])
-                            pulse_val = float(numbers[2]) if len(numbers) > 2 else 70
+                        # Convert to grayscale
+                        gray_image = image.convert('L')
+                        
+                        # Increase contrast
+                        enhancer = ImageEnhance.Contrast(gray_image)
+                        enhanced_image = enhancer.enhance(2.0)
+                        
+                        # Sharpen
+                        sharpened = enhanced_image.filter(ImageFilter.SHARPEN)
+                        
+                        # Try OCR with different configurations
+                        configs = [
+                            '--psm 6',  # Assume uniform block of text
+                            '--psm 11', # Sparse text
+                            '--psm 7',  # Single line
+                        ]
+                        
+                        all_numbers = []
+                        for config in configs:
+                            text = pytesseract.image_to_string(sharpened, config=config)
+                            numbers = re.findall(r'\d+\.?\d*', text)
+                            all_numbers.extend(numbers)
+                        
+                        # Remove duplicates and sort
+                        unique_numbers = list(set(all_numbers))
+                        
+                        st.write("**识别到的文字 Detected text:**")
+                        st.code(pytesseract.image_to_string(enhanced_image))
+                        st.write("**提取的数字 Extracted numbers:**", unique_numbers)
+                        
+                        if len(unique_numbers) >= 2:
+                            # Try to identify BP numbers (usually 2-3 digits, first is higher)
+                            valid_numbers = [float(n) for n in unique_numbers if len(n) <= 3]
+                            valid_numbers.sort(reverse=True)
+                            
+                            systolic_val = valid_numbers[0] if len(valid_numbers) > 0 else 120
+                            diastolic_val = valid_numbers[1] if len(valid_numbers) > 1 else 80
+                            pulse_val = valid_numbers[2] if len(valid_numbers) > 2 else 70
                             
                             # Check if values are in valid range
                             systolic_ocr = int(systolic_val) if 50 <= systolic_val <= 250 else 120
@@ -161,11 +194,14 @@ if page == "📝 数据输入 Data Entry":
                             st.session_state.ocr_pulse = pulse_ocr
                             
                             st.success(f"✅ 识别成功！Systolic: {systolic_ocr}, Diastolic: {diastolic_ocr}, Pulse: {pulse_ocr}")
-                            st.info("💡 请检查数值是否正确，如有错误请手动修改 Please verify the numbers and adjust if needed")
+                            st.info("💡 请检查数值是否正确，如有错误请手动修改 Please verify and adjust if needed")
+                            st.rerun()
                         else:
-                            st.warning("⚠️ 无法识别足够的数字，请手动输入 Cannot detect enough numbers, please enter manually")
+                            st.warning("⚠️ 无法识别足够的数字 Cannot detect enough numbers")
+                            st.info("**拍照建议 Tips:**\n- 确保光线充足 Good lighting\n- 数字清晰可见 Clear numbers\n- 避免阴影和反光 No shadows/glare\n- 尝试不同角度 Try different angles")
                     except Exception as e:
                         st.error(f"❌ OCR 错误: {e}")
+                        st.info("建议手动输入数值 Please enter manually")
     
     with col_b:
         st.info("💡 **拍照小贴士 Tips:**\n- 光线充足 Good lighting\n- 数字清晰 Clear numbers\n- 避免反光 No glare")
