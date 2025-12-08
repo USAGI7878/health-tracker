@@ -2,7 +2,7 @@ streamlit
 pandas
 gspread
 google-auth
+google-cloud-vision
 twilio
-pytesseract
 Pillow
 requests
