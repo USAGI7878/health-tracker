@@ -146,17 +146,24 @@ if page == "📝 数据输入 Data Entry":
                         numbers = re.findall(r'\d+\.?\d*', text)
                         
                         if len(numbers) >= 2:
-                            systolic_ocr = int(float(numbers[0])) if float(numbers[0]) < 250 else 120
-                            diastolic_ocr = int(float(numbers[1])) if float(numbers[1]) < 150 else 80
-                            pulse_ocr = int(float(numbers[2])) if len(numbers) > 2 and float(numbers[2]) < 200 else 70
+                            # Validate and set reasonable defaults if out of range
+                            systolic_val = float(numbers[0])
+                            diastolic_val = float(numbers[1])
+                            pulse_val = float(numbers[2]) if len(numbers) > 2 else 70
+                            
+                            # Check if values are in valid range
+                            systolic_ocr = int(systolic_val) if 50 <= systolic_val <= 250 else 120
+                            diastolic_ocr = int(diastolic_val) if 30 <= diastolic_val <= 150 else 80
+                            pulse_ocr = int(pulse_val) if 30 <= pulse_val <= 180 else 70
                             
                             st.session_state.ocr_systolic = systolic_ocr
                             st.session_state.ocr_diastolic = diastolic_ocr
                             st.session_state.ocr_pulse = pulse_ocr
                             
                             st.success(f"✅ 识别成功！Systolic: {systolic_ocr}, Diastolic: {diastolic_ocr}, Pulse: {pulse_ocr}")
+                            st.info("💡 请检查数值是否正确，如有错误请手动修改 Please verify the numbers and adjust if needed")
                         else:
-                            st.warning("⚠️ 无法识别，请手动输入")
+                            st.warning("⚠️ 无法识别足够的数字，请手动输入 Cannot detect enough numbers, please enter manually")
                     except Exception as e:
                         st.error(f"❌ OCR 错误: {e}")
     
@@ -167,6 +174,16 @@ if page == "📝 数据输入 Data Entry":
     
     # 手动输入表单
     st.subheader("✍️ 手动输入 Manual Entry")
+    
+    # Initialize default values if OCR data doesn't exist or is invalid
+    default_systolic = st.session_state.get("ocr_systolic", 120)
+    default_diastolic = st.session_state.get("ocr_diastolic", 80)
+    default_pulse = st.session_state.get("ocr_pulse", 70)
+    
+    # Ensure defaults are within valid range
+    default_systolic = max(50, min(250, default_systolic))
+    default_diastolic = max(30, min(150, default_diastolic))
+    default_pulse = max(30, min(180, default_pulse))
     
     with st.form("record_form"):
         col1, col2 = st.columns(2)
@@ -194,21 +211,21 @@ if page == "📝 数据输入 Data Entry":
                 "收缩压 Systolic", 
                 min_value=50, 
                 max_value=250, 
-                value=st.session_state.get("ocr_systolic", 120)
+                value=default_systolic
             )
             diastolic = st.number_input(
                 "舒张压 Diastolic", 
                 min_value=30, 
                 max_value=150, 
-                value=st.session_state.get("ocr_diastolic", 80)
+                value=default_diastolic
             )
             pulse = st.number_input(
                 "脉搏 Pulse", 
                 min_value=30, 
                 max_value=180, 
-                value=st.session_state.get("ocr_pulse", 70)
+                value=default_pulse
             )
-            glucose = st.number_input("血糖 Blood Sugar (mmol/L)", min_value=1.0, max_value=20.0, format="%.1f")
+            glucose = st.number_input("血糖 Blood Sugar (mmol/L)", min_value=1.0, max_value=20.0, format="%.1f", value=5.0)
         
         bp_note = st.text_input("血压备注 BP Note", placeholder="例如：感觉头晕、还好等")
         glucose_note = st.text_input("血糖备注 Glucose Note", placeholder="例如：空腹后测量、饭后两小时等")
