@@ -126,85 +126,79 @@ if page == "📝 数据输入 Data Entry":
     
     # 📸 OCR 功能
     st.subheader("📸 拍照上传 Snap & Upload")
+    st.info("💡 **OCR 使用说明 How to use:**\n1. 上传照片 Upload photo\n2. 点击识别按钮 Click Read button\n3. 检查识别结果 Check results\n4. 滚动到下方表单查看数值 Scroll down to see values in form")
     
     col_a, col_b = st.columns([1, 1])
     
     with col_a:
         uploaded_image = st.file_uploader(
             "上传血压计或血糖仪照片 Upload photo", 
-            type=["jpg", "jpeg", "png"]
+            type=["jpg", "jpeg", "png"],
+            key="image_uploader"
         )
         
         if uploaded_image:
             image = Image.open(uploaded_image)
-            st.image(image, caption="上传的照片", use_container_width=True)
+            st.image(image, caption="上传的照片 Uploaded Photo", use_container_width=True)
             
-            if st.button("🔍 识别数值 Read Numbers", use_container_width=True):
+            if st.button("🔍 识别数值 Read Numbers", use_container_width=True, key="ocr_button"):
                 with st.spinner("正在识别中 Reading..."):
                     try:
-                        # Preprocess image for better OCR
-                        from PIL import ImageEnhance, ImageFilter
-                        
-                        # Convert to grayscale
+                        # Simple preprocessing
                         gray_image = image.convert('L')
                         
-                        # Increase contrast
-                        enhancer = ImageEnhance.Contrast(gray_image)
-                        enhanced_image = enhancer.enhance(2.0)
+                        # Try basic OCR first
+                        text = pytesseract.image_to_string(gray_image, config='--psm 6 digits')
                         
-                        # Sharpen
-                        sharpened = enhanced_image.filter(ImageFilter.SHARPEN)
-                        
-                        # Try OCR with different configurations
-                        configs = [
-                            '--psm 6',  # Assume uniform block of text
-                            '--psm 11', # Sparse text
-                            '--psm 7',  # Single line
-                        ]
-                        
-                        all_numbers = []
-                        for config in configs:
-                            text = pytesseract.image_to_string(sharpened, config=config)
-                            numbers = re.findall(r'\d+\.?\d*', text)
-                            all_numbers.extend(numbers)
-                        
-                        # Remove duplicates and sort
-                        unique_numbers = list(set(all_numbers))
-                        
-                        st.write("**识别到的文字 Detected text:**")
-                        st.code(pytesseract.image_to_string(enhanced_image))
-                        st.write("**提取的数字 Extracted numbers:**", unique_numbers)
-                        
-                        if len(unique_numbers) >= 2:
-                            # Try to identify BP numbers (usually 2-3 digits, first is higher)
-                            valid_numbers = [float(n) for n in unique_numbers if len(n) <= 3]
-                            valid_numbers.sort(reverse=True)
+                        # Show what was detected
+                        with st.expander("🔍 查看识别结果 View Detection Results", expanded=True):
+                            st.write("**原始文字 Raw Text:**")
+                            st.code(text if text.strip() else "未检测到文字 No text detected")
                             
-                            systolic_val = valid_numbers[0] if len(valid_numbers) > 0 else 120
-                            diastolic_val = valid_numbers[1] if len(valid_numbers) > 1 else 80
-                            pulse_val = valid_numbers[2] if len(valid_numbers) > 2 else 70
+                            # Extract all numbers
+                            numbers = re.findall(r'\d+', text)
+                            st.write("**数字列表 Numbers found:**", numbers if numbers else "无 None")
+                        
+                        if numbers and len(numbers) >= 2:
+                            # Convert to integers
+                            num_list = [int(n) for n in numbers if n.isdigit()]
                             
-                            # Check if values are in valid range
-                            systolic_ocr = int(systolic_val) if 50 <= systolic_val <= 250 else 120
-                            diastolic_ocr = int(diastolic_val) if 30 <= diastolic_val <= 150 else 80
-                            pulse_ocr = int(pulse_val) if 30 <= pulse_val <= 180 else 70
+                            # Filter reasonable BP values
+                            possible_systolic = [n for n in num_list if 80 <= n <= 200]
+                            possible_diastolic = [n for n in num_list if 40 <= n <= 120]
+                            possible_pulse = [n for n in num_list if 40 <= n <= 150]
                             
-                            st.session_state.ocr_systolic = systolic_ocr
-                            st.session_state.ocr_diastolic = diastolic_ocr
-                            st.session_state.ocr_pulse = pulse_ocr
+                            # Set values
+                            if possible_systolic:
+                                st.session_state.ocr_systolic = possible_systolic[0]
+                            if possible_diastolic:
+                                st.session_state.ocr_diastolic = possible_diastolic[0]
+                            if possible_pulse:
+                                st.session_state.ocr_pulse = possible_pulse[0]
                             
-                            st.success(f"✅ 识别成功！Systolic: {systolic_ocr}, Diastolic: {diastolic_ocr}, Pulse: {pulse_ocr}")
-                            st.info("💡 请检查数值是否正确，如有错误请手动修改 Please verify and adjust if needed")
-                            st.rerun()
+                            systolic_val = st.session_state.get('ocr_systolic', 120)
+                            diastolic_val = st.session_state.get('ocr_diastolic', 80)
+                            pulse_val = st.session_state.get('ocr_pulse', 70)
+                            
+                            st.success(f"✅ 识别成功 Success! \n\n收缩压 Systolic: **{systolic_val}**\n\n舒张压 Diastolic: **{diastolic_val}**\n\n脉搏 Pulse: **{pulse_val}**")
+                            st.warning("⚠️ 请向下滚动到表单检查数值 Please scroll down to the form to verify values!")
+                            
                         else:
-                            st.warning("⚠️ 无法识别足够的数字 Cannot detect enough numbers")
-                            st.info("**拍照建议 Tips:**\n- 确保光线充足 Good lighting\n- 数字清晰可见 Clear numbers\n- 避免阴影和反光 No shadows/glare\n- 尝试不同角度 Try different angles")
+                            st.warning("⚠️ 无法识别数字 Cannot detect numbers")
+                            st.info("""
+                            **改善建议 Tips to improve:**
+                            - ☀️ 使用更好的光线 Use better lighting
+                            - 📱 拍清晰的照片 Take clearer photos  
+                            - 🔍 靠近数字拍摄 Get closer to numbers
+                            - ⬜ 确保背景简单 Simple background
+                            - 🖊️ 或直接手动输入 Or just enter manually below
+                            """)
                     except Exception as e:
-                        st.error(f"❌ OCR 错误: {e}")
-                        st.info("建议手动输入数值 Please enter manually")
+                        st.error(f"❌ OCR 错误 Error: {str(e)}")
+                        st.info("💡 Tesseract 可能未正确安装。请使用手动输入 Please use manual entry below")
     
     with col_b:
-        st.info("💡 **拍照小贴士 Tips:**\n- 光线充足 Good lighting\n- 数字清晰 Clear numbers\n- 避免反光 No glare")
+        st.info("💡 **拍照小贴士 Photo Tips:**\n- 光线充足 Good lighting\n- 数字清晰 Clear numbers\n- 避免反光 No glare\n- 填满屏幕 Fill the frame")
     
     st.markdown("---")
     
