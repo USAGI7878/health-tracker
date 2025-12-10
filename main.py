@@ -153,77 +153,142 @@ if page == "📝 数据输入 Data Entry":
             if st.button("🔍 识别数值 Read Numbers", use_container_width=True, key="ocr_button"):
                 with st.spinner("正在识别中 Reading..."):
                     try:
-                        # Convert PIL Image to bytes
+                        # Convert image to base64 for AI analysis
                         img_byte_arr = io.BytesIO()
                         image.save(img_byte_arr, format='PNG')
                         img_byte_arr = img_byte_arr.getvalue()
                         
-                        # Create Vision API image object
-                        vision_image = vision.Image(content=img_byte_arr)
+                        import base64
+                        image_base64 = base64.b64encode(img_byte_arr).decode('utf-8')
                         
-                        # Perform text detection
-                        response = vision_client.text_detection(image=vision_image)
-                        texts = response.text_annotations
-                        
-                        if response.error.message:
-                            raise Exception(response.error.message)
-                        
-                        # Extract full text
-                        full_text = texts[0].description if texts else ""
-                        
-                        # Show what was detected
-                        with st.expander("🔍 查看识别结果 View Detection Results", expanded=True):
-                            st.write("**识别到的文字 Detected Text:**")
-                            st.code(full_text if full_text.strip() else "未检测到文字 No text detected")
+                        # Use Groq Vision to analyze the image
+                        if groq_api_key:
+                            ai_response = requests.post(
+                                "https://api.groq.com/openai/v1/chat/completions",
+                                headers={
+                                    "Authorization": f"Bearer {groq_api_key}",
+                                    "Content-Type": "application/json"
+                                },
+                                json={
+                                    "model": "llama-3.2-90b-vision-preview",
+                                    "messages": [
+                                        {
+                                            "role": "user",
+                                            "content": [
+                                                {
+                                                    "type": "text",
+                                                    "text": """Look at this blood pressure or glucose monitor photo carefully. 
+Extract ONLY the numbers for:
+1. Systolic (top number, usually 90-200)
+2. Diastolic (bottom number, usually 50-110)  
+3. Pulse/Heart Rate (usually 40-150)
+
+Respond ONLY in this exact JSON format, nothing else:
+{"systolic": number, "diastolic": number, "pulse": number}
+
+If you can't find a value, use 0."""
+                                                },
+                                                {
+                                                    "type": "image_url",
+                                                    "image_url": {
+                                                        "url": f"data:image/png;base64,{image_base64}"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    "temperature": 0.1,
+                                    "max_tokens": 100
+                                }
+                            )
                             
-                            # Extract all numbers
-                            numbers = re.findall(r'\d+', full_text)
-                            st.write("**数字列表 Numbers found:**", numbers if numbers else "无 None")
-                        
-                        if numbers and len(numbers) >= 2:
-                            # Convert to integers
-                            num_list = [int(n) for n in numbers if n.isdigit() and len(n) <= 3]
-                            
-                            # Sort numbers (usually BP shows: systolic > diastolic)
-                            num_list.sort(reverse=True)
-                            
-                            # Smart assignment based on typical BP ranges
-                            systolic_val = 120
-                            diastolic_val = 80
-                            pulse_val = 70
-                            
-                            for num in num_list:
-                                if 90 <= num <= 200 and systolic_val == 120:
-                                    systolic_val = num
-                                elif 50 <= num <= 110 and diastolic_val == 80 and num < systolic_val:
-                                    diastolic_val = num
-                                elif 40 <= num <= 150 and pulse_val == 70:
-                                    pulse_val = num
-                            
-                            st.session_state.ocr_systolic = systolic_val
-                            st.session_state.ocr_diastolic = diastolic_val
-                            st.session_state.ocr_pulse = pulse_val
-                            
-                            st.success(f"""✅ 识别成功 Success! 
-                            
-收缩压 Systolic: **{systolic_val}** mmHg
-舒张压 Diastolic: **{diastolic_val}** mmHg  
-脉搏 Pulse: **{pulse_val}** bpm""")
-                            st.warning("⚠️ 请向下滚动到表单检查数值 Please scroll down to verify values in the form!")
-                            
+                            if ai_response.status_code == 200:
+                                ai_text = ai_response.json()["choices"][0]["message"]["content"]
+                                
+                                with st.expander("🔍 查看识别结果 View Detection Results", expanded=True):
+                                    st.write("**AI 分析结果 AI Analysis:**")
+                                    st.code(ai_text)
+                                
+                                # Parse JSON response
+                                import json
+                                # Extract JSON from response
+                                json_match = re.search(r'\{[^}]+\}', ai_text)
+                                if json_match:
+                                    data = json.loads(json_match.group())
+                                    
+                                    systolic_val = data.get('systolic', 120)
+                                    diastolic_val = data.get('diastolic', 80)
+                                    pulse_val = data.get('pulse', 70)
+                                    
+                                    # Validate ranges
+                                    if 50 <= systolic_val <= 250:
+                                        st.session_state.ocr_systolic = systolic_val
+                                    if 30 <= diastolic_val <= 150:
+                                        st.session_state.ocr_diastolic = diastolic_val
+                                    if 30 <= pulse_val <= 180:
+                                        st.session_state.ocr_pulse = pulse_val
+                                    
+                                    st.success(f"""✅ AI 识别成功 AI Success! 
+                                    
+收缩压 Systolic: **{st.session_state.get('ocr_systolic', 120)}** mmHg
+舒张压 Diastolic: **{st.session_state.get('ocr_diastolic', 80)}** mmHg  
+脉搏 Pulse: **{st.session_state.get('ocr_pulse', 70)}** bpm""")
+                                    st.warning("⚠️ 请向下滚动到表单检查数值 Please scroll down to verify!")
+                                else:
+                                    st.warning("⚠️ AI 无法识别数字 AI cannot detect numbers")
+                            else:
+                                st.error(f"AI 错误: {ai_response.status_code}")
+                                raise Exception("AI analysis failed, falling back to Vision API")
                         else:
-                            st.warning("⚠️ 无法识别足够的数字 Cannot detect enough numbers")
-                            st.info("""
-                            **改善建议 Tips to improve:**
-                            - ☀️ 使用更好的光线 Use better lighting
-                            - 📱 拍清晰的照片 Take clearer photos  
-                            - 🔍 靠近数字拍摄 Get closer to numbers
-                            - ⬜ 确保背景简单 Simple background
-                            - 🖊️ 或直接手动输入 Or just enter manually below
-                            """)
+                            raise Exception("No Groq API key, using Vision API fallback")
+                            
                     except Exception as e:
-                        st.error(f"❌ OCR 错误 Error: {str(e)}")
-                        st.info("💡 请检查 Google Cloud Vision API 是否已启用 Please check if Vision API is enabled")
+                        # Fallback to Google Vision API
+                        st.info("🔄 使用备用识别方法 Using backup OCR...")
+                        try:
+                            vision_image = vision.Image(content=img_byte_arr)
+                            response = vision_client.text_detection(image=vision_image)
+                            texts = response.text_annotations
+                            
+                            if response.error.message:
+                                raise Exception(response.error.message)
+                            
+                            full_text = texts[0].description if texts else ""
+                            
+                            with st.expander("🔍 备用识别结果 Backup OCR Results", expanded=True):
+                                st.write("**识别到的文字:**")
+                                st.code(full_text if full_text.strip() else "未检测到文字")
+                                
+                                numbers = re.findall(r'\d+', full_text)
+                                st.write("**数字列表:**", numbers if numbers else "无")
+                            
+                            if numbers and len(numbers) >= 2:
+                                num_list = [int(n) for n in numbers if n.isdigit() and len(n) <= 3]
+                                num_list.sort(reverse=True)
+                                
+                                systolic_val = 120
+                                diastolic_val = 80
+                                pulse_val = 70
+                                
+                                for num in num_list:
+                                    if 90 <= num <= 200 and systolic_val == 120:
+                                        systolic_val = num
+                                    elif 50 <= num <= 110 and diastolic_val == 80 and num < systolic_val:
+                                        diastolic_val = num
+                                    elif 40 <= num <= 150 and pulse_val == 70:
+                                        pulse_val = num
+                                
+                                st.session_state.ocr_systolic = systolic_val
+                                st.session_state.ocr_diastolic = diastolic_val
+                                st.session_state.ocr_pulse = pulse_val
+                                
+                                st.success(f"✅ 识别成功！Systolic: {systolic_val}, Diastolic: {diastolic_val}, Pulse: {pulse_val}")
+                            else:
+                                st.warning("⚠️ 无法识别足够的数字")
+                                st.info("建议手动输入 Please enter manually")
+                        except Exception as vision_error:
+                            st.error(f"❌ 所有识别方法失败 All OCR methods failed: {str(vision_error)}")
+                            st.info("💡 请使用手动输入 Please use manual entry below")
     
     with col_b:
         st.info("💡 **拍照小贴士 Photo Tips:**\n- 光线充足 Good lighting\n- 数字清晰 Clear numbers\n- 避免反光 No glare\n- 填满屏幕 Fill the frame")
