@@ -107,7 +107,7 @@ def load_medication_stock():
     return stock_df
 
 # 侧边栏导航
-st.sidebar.title("📱 导航 Navigation")
+st.sidebar.title("📱 菜单 Menu")
 page = st.sidebar.radio(
     "选择页面 Choose Page:",
     ["📝 数据输入 Data Entry", "📊 趋势图表 Charts", "💊 药物管理 Medication", "🤖 AI 助手 AI Assistant"]
