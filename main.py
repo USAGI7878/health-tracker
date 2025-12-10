@@ -5,9 +5,10 @@ from google.oauth2 import service_account
 from twilio.rest import Client
 import datetime
 from PIL import Image
-import pytesseract
 import re
 import requests
+import io
+from google.cloud import vision
 
 # 设置页面
 st.set_page_config(page_title="健康追踪器 Health Tracker", layout="wide")
@@ -28,17 +29,26 @@ def init_google_sheets():
 try:
     gc = init_google_sheets()
     spreadsheet = gc.open("BP-Glucose-Tracker")
+    vision_client = init_vision_client()
 except Exception as e:
     st.error(f"❌ 连接失败：{e}")
     st.stop()
+
+# ✅ Groq API 配置
+groq_api_key = st.secrets.get("groq", {}).get("api_key", "")
 
 # ✅ Twilio 授权
 account_sid = st.secrets["twilio"]["account_sid"]
 auth_token = st.secrets["twilio"]["auth_token"]
 twilio_client = Client(account_sid, auth_token)
 
-# ✅ Groq API 配置
-groq_api_key = st.secrets.get("groq", {}).get("api_key", "")
+# ✅ Google Cloud Vision 授权
+@st.cache_resource
+def init_vision_client():
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    return vision.ImageAnnotatorClient(credentials=creds)
 
 # 读取数据
 @st.cache_data(ttl=60)
@@ -144,47 +154,66 @@ if page == "📝 数据输入 Data Entry":
             if st.button("🔍 识别数值 Read Numbers", use_container_width=True, key="ocr_button"):
                 with st.spinner("正在识别中 Reading..."):
                     try:
-                        # Simple preprocessing
-                        gray_image = image.convert('L')
+                        # Convert PIL Image to bytes
+                        img_byte_arr = io.BytesIO()
+                        image.save(img_byte_arr, format='PNG')
+                        img_byte_arr = img_byte_arr.getvalue()
                         
-                        # Try basic OCR first
-                        text = pytesseract.image_to_string(gray_image, config='--psm 6 digits')
+                        # Create Vision API image object
+                        vision_image = vision.Image(content=img_byte_arr)
+                        
+                        # Perform text detection
+                        response = vision_client.text_detection(image=vision_image)
+                        texts = response.text_annotations
+                        
+                        if response.error.message:
+                            raise Exception(response.error.message)
+                        
+                        # Extract full text
+                        full_text = texts[0].description if texts else ""
                         
                         # Show what was detected
                         with st.expander("🔍 查看识别结果 View Detection Results", expanded=True):
-                            st.write("**原始文字 Raw Text:**")
-                            st.code(text if text.strip() else "未检测到文字 No text detected")
+                            st.write("**识别到的文字 Detected Text:**")
+                            st.code(full_text if full_text.strip() else "未检测到文字 No text detected")
                             
                             # Extract all numbers
-                            numbers = re.findall(r'\d+', text)
+                            numbers = re.findall(r'\d+', full_text)
                             st.write("**数字列表 Numbers found:**", numbers if numbers else "无 None")
                         
                         if numbers and len(numbers) >= 2:
                             # Convert to integers
-                            num_list = [int(n) for n in numbers if n.isdigit()]
+                            num_list = [int(n) for n in numbers if n.isdigit() and len(n) <= 3]
                             
-                            # Filter reasonable BP values
-                            possible_systolic = [n for n in num_list if 80 <= n <= 200]
-                            possible_diastolic = [n for n in num_list if 40 <= n <= 120]
-                            possible_pulse = [n for n in num_list if 40 <= n <= 150]
+                            # Sort numbers (usually BP shows: systolic > diastolic)
+                            num_list.sort(reverse=True)
                             
-                            # Set values
-                            if possible_systolic:
-                                st.session_state.ocr_systolic = possible_systolic[0]
-                            if possible_diastolic:
-                                st.session_state.ocr_diastolic = possible_diastolic[0]
-                            if possible_pulse:
-                                st.session_state.ocr_pulse = possible_pulse[0]
+                            # Smart assignment based on typical BP ranges
+                            systolic_val = 120
+                            diastolic_val = 80
+                            pulse_val = 70
                             
-                            systolic_val = st.session_state.get('ocr_systolic', 120)
-                            diastolic_val = st.session_state.get('ocr_diastolic', 80)
-                            pulse_val = st.session_state.get('ocr_pulse', 70)
+                            for num in num_list:
+                                if 90 <= num <= 200 and systolic_val == 120:
+                                    systolic_val = num
+                                elif 50 <= num <= 110 and diastolic_val == 80 and num < systolic_val:
+                                    diastolic_val = num
+                                elif 40 <= num <= 150 and pulse_val == 70:
+                                    pulse_val = num
                             
-                            st.success(f"✅ 识别成功 Success! \n\n收缩压 Systolic: **{systolic_val}**\n\n舒张压 Diastolic: **{diastolic_val}**\n\n脉搏 Pulse: **{pulse_val}**")
-                            st.warning("⚠️ 请向下滚动到表单检查数值 Please scroll down to the form to verify values!")
+                            st.session_state.ocr_systolic = systolic_val
+                            st.session_state.ocr_diastolic = diastolic_val
+                            st.session_state.ocr_pulse = pulse_val
+                            
+                            st.success(f"""✅ 识别成功 Success! 
+                            
+收缩压 Systolic: **{systolic_val}** mmHg
+舒张压 Diastolic: **{diastolic_val}** mmHg  
+脉搏 Pulse: **{pulse_val}** bpm""")
+                            st.warning("⚠️ 请向下滚动到表单检查数值 Please scroll down to verify values in the form!")
                             
                         else:
-                            st.warning("⚠️ 无法识别数字 Cannot detect numbers")
+                            st.warning("⚠️ 无法识别足够的数字 Cannot detect enough numbers")
                             st.info("""
                             **改善建议 Tips to improve:**
                             - ☀️ 使用更好的光线 Use better lighting
@@ -195,7 +224,7 @@ if page == "📝 数据输入 Data Entry":
                             """)
                     except Exception as e:
                         st.error(f"❌ OCR 错误 Error: {str(e)}")
-                        st.info("💡 Tesseract 可能未正确安装。请使用手动输入 Please use manual entry below")
+                        st.info("💡 请检查 Google Cloud Vision API 是否已启用 Please check if Vision API is enabled")
     
     with col_b:
         st.info("💡 **拍照小贴士 Photo Tips:**\n- 光线充足 Good lighting\n- 数字清晰 Clear numbers\n- 避免反光 No glare\n- 填满屏幕 Fill the frame")
