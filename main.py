@@ -26,6 +26,14 @@ def init_google_sheets():
     client = gspread.authorize(creds)
     return client
 
+# ✅ Google Cloud Vision 授权
+@st.cache_resource
+def init_vision_client():
+    creds = service_account.Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    return vision.ImageAnnotatorClient(credentials=creds)
+
 try:
     gc = init_google_sheets()
     spreadsheet = gc.open("BP-Glucose-Tracker")
@@ -34,21 +42,13 @@ except Exception as e:
     st.error(f"❌ 连接失败：{e}")
     st.stop()
 
-# ✅ Groq API 配置
-groq_api_key = st.secrets.get("groq", {}).get("api_key", "")
-
 # ✅ Twilio 授权
 account_sid = st.secrets["twilio"]["account_sid"]
 auth_token = st.secrets["twilio"]["auth_token"]
 twilio_client = Client(account_sid, auth_token)
 
-# ✅ Google Cloud Vision 授权
-@st.cache_resource
-def init_vision_client():
-    creds = service_account.Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"]
-    )
-    return vision.ImageAnnotatorClient(credentials=creds)
+# ✅ Groq API 配置
+groq_api_key = st.secrets.get("groq", {}).get("api_key", "")
 
 # 读取数据
 @st.cache_data(ttl=60)
@@ -76,7 +76,7 @@ def load_health_data():
     # Clean up the data
     if "Date" in df.columns:
         df["Date"] = pd.to_datetime(df["Date"], errors='coerce')
-        df = df.dropna(subset=["Date"])  # Remove rows with invalid dates
+        df = df.dropna(subset=["Date"])
         df["Date"] = df["Date"].dt.strftime('%Y-%m-%d')
     
     # Convert numeric columns and handle empty strings
@@ -85,7 +85,6 @@ def load_health_data():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce')
     
-    # Remove completely empty rows
     df = df.dropna(how='all')
     
     return df
@@ -299,8 +298,8 @@ if page == "📝 数据输入 Data Entry":
             submission_time = datetime.datetime.now()
             
             new_row = [
-                submission_time.strftime("%Y-%m-%d"),  # Date
-                submission_time.strftime("%H:%M:%S"),  # Exact time
+                submission_time.strftime("%Y-%m-%d"),
+                submission_time.strftime("%H:%M:%S"),
                 took_med, medication, before_after, dose,
                 systolic, diastolic, pulse, bp_status, bp_note, glucose, glucose_status, glucose_note
             ]
