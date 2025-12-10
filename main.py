@@ -191,10 +191,15 @@ if page == "📝 数据输入 Data Entry":
 
 Text: {full_text}
 
-Extract:
-- Systolic (top number, usually 90-200)
-- Diastolic (bottom number, usually 50-110)
-- Pulse (heart rate, usually 40-150)
+IMPORTANT RULES:
+- Systolic: Look for "SYS", "S", or the HIGHER number (usually 90-200)
+- Diastolic: Look for "DIA", "D", or the LOWER number (usually 50-110)
+- Pulse: Look for "PR", "PULSE", "HR", or "P" label first. If no label, use remaining number (usually 40-150)
+
+Common formats:
+- "SYS 120 DIA 80 PR 75"
+- "120/80 PR 75"
+- "120 80 75" (systolic, diastolic, pulse in order)
 
 Respond ONLY with valid JSON, no other text:
 {{"systolic": number, "diastolic": number, "pulse": number}}
